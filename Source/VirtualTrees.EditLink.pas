@@ -302,7 +302,7 @@ procedure TVTEdit.WMKeyDown(var Message : TWMKeyDown);
 var
   Shift : TShiftState;
   EndEdit : Boolean;
-  Tree : TBaseVirtualTree;
+  Tree : TCustomVirtualStringTree;
   NextNode : PVirtualNode;
   ColumnCandidate : Integer;
   EditOptions : TVTEditOptions;

@@ -50,7 +50,7 @@
 
 interface
 
-{$if CompilerVersion < 24}{$MESSAGE FATAL 'This version supports only RAD Studio XE3 and higher. Please use V5 from  http://www.jam-software.com/virtual-treeview/VirtualTreeViewV5.5.3.zip  or  https://github.com/Virtual-TreeView/Virtual-TreeView/archive/V5_stable.zip'}{$ifend}
+{$if CompilerVersion < 23}{$MESSAGE FATAL 'This version supports only RAD Studio XE2 and higher. Please use V5 from  http://www.jam-software.com/virtual-treeview/VirtualTreeViewV5.5.3.zip  or  https://github.com/Virtual-TreeView/Virtual-TreeView/archive/V5_stable.zip'}{$ifend}
 
 {$booleval off} // Use fastest possible boolean evaluation
 
@@ -59,7 +59,10 @@ interface
 {$WARN UNSAFE_CAST OFF}
 {$WARN UNSAFE_CODE OFF}
 
+{$if CompilerVersion >= 24}
 {$LEGACYIFEND ON}
+{$ifend}
+
 {$WARN UNSUPPORTED_CONSTRUCT      OFF}
 
 {$HPPEMIT '#include <objidl.h>'}
@@ -145,6 +148,8 @@ type
     StaticTextAlignment: TAlignment;
     ExportType: TVTExportType;
     constructor Create(pNode: PVirtualNode; pColumn: TColumnIndex; pExportType: TVTExportType = TVTExportType.etNone);
+    function HasCellText : Boolean;
+    function HasStaticText : Boolean;
   end;
 
   /// Event signature which is called when text is painted on the canvas or needed for the export.
@@ -1273,11 +1278,11 @@ begin
     DoGetText(lEventArgs);
 
     // Paint the normal text first...
-    if not lEventArgs.CellText.IsEmpty then
+    if lEventArgs.HasCellText then
       PaintNormalText(PaintInfo, TextOutFlags, lEventArgs.CellText);
 
     // ... and afterwards the static text if not centered and the node is not multiline enabled.
-    if (Alignment <> taCenter) and not (vsMultiline in PaintInfo.Node.States) and (toShowStaticText in TreeOptions.StringOptions) and not lEventArgs.StaticText.IsEmpty then
+    if (Alignment <> taCenter) and not (vsMultiline in PaintInfo.Node.States) and (toShowStaticText in TreeOptions.StringOptions) and lEventArgs.HasStaticText then
       PaintStaticText(PaintInfo, lEventArgs.StaticTextAlignment, lEventArgs.StaticText);
   finally
     RestoreFontChangeEvent(PaintInfo.Canvas);
@@ -1916,6 +1921,15 @@ begin
   Self.ExportType := pExportType;
 end;
 
+function TVSTGetCellTextEventArgs.HasCellText : Boolean;
+begin
+  Result := {$if CompilerVersion > 23}not CellText.IsEmpty{$else}CellText <> ''{$ifend};
+end;
+
+function TVSTGetCellTextEventArgs.HasStaticText : Boolean;
+begin
+  Result := {$if CompilerVersion > 23}not StaticText.IsEmpty{$else}StaticText <> ''{$ifend};
+end;
 
 initialization
 

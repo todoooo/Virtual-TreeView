@@ -4,7 +4,9 @@ interface
 
 uses
   System.Classes,
+{$if CompilerVersion > 23}
   System.Actions,
+{$ifend}
   Vcl.Controls,
   Vcl.ActnList,
   VirtualTrees,
@@ -242,6 +244,8 @@ end;
 { TVirtualTreeCheckAll }
 
 constructor TVirtualTreeCheckAll.Create(AOwner: TComponent);
+var
+  NodeState : TCheckState;
 begin
   inherited Create(AOwner);
   Hint := 'Check all items in the list';
@@ -249,7 +253,8 @@ begin
   fDesiredCheckState := csCheckedNormal;
   fToExecute := procedure(Sender: TBaseVirtualTree; Node: PVirtualNode; Data: Pointer; var Abort: Boolean)
                 begin
-                  if not Control.CheckState[Node].IsDisabled then
+                  NodeState := Control.CheckState[Node];
+                  if not {$if CompilerVersion > 23}NodeState.IsDisabled{$else}CheckStateIsDisabled(NodeState){$ifend} then
                     Control.CheckState[Node] := fDesiredCheckState;
                 end;
 end;

@@ -2,7 +2,7 @@
 
 interface
 
-{$if CompilerVersion < 24}{$MESSAGE FATAL 'This version supports only RAD Studio XE3 and higher. Please use V5 from  http://www.jam-software.com/virtual-treeview/VirtualTreeViewV5.5.3.zip  or  https://github.com/Virtual-TreeView/Virtual-TreeView/archive/V5_stable.zip'}{$ifend}
+{$if CompilerVersion < 23}{$MESSAGE FATAL 'This version supports only RAD Studio XE2 and higher. Please use V5 from  http://www.jam-software.com/virtual-treeview/VirtualTreeViewV5.5.3.zip  or  https://github.com/Virtual-TreeView/Virtual-TreeView/archive/V5_stable.zip'}{$ifend}
 
 {$booleval off} // Use fastest possible boolean evaluation
 
@@ -11,7 +11,9 @@ interface
 {$WARN UNSAFE_CAST OFF}
 {$WARN UNSAFE_CODE OFF}
 
+{$if CompilerVersion > 23}
 {$LEGACYIFEND ON}
+{$ifend}
 {$WARN UNSUPPORTED_CONSTRUCT      OFF}
 
 {$HPPEMIT '#include <objidl.h>'}
@@ -71,14 +73,12 @@ var
   {$MinEnumSize 1, make enumerations as small as possible}
 
 type
-  {$IFDEF VT_FMX}
-    TVTBaseAncestor = TVTBaseAncestorFMX;
-  {$ELSE}
-    TVTBaseAncestor = TVTBaseAncestorVcl;
-  {$ENDIF}
-
   // Alias defintions for convenience
-  TImageIndex              = System.UITypes.TImageIndex;
+{$if CompilerVersion > 23}
+  TImageIndex = System.UITypes.TImageIndex;
+{$else}
+  TImageIndex = Vcl.ImgList.TImageIndex;
+{$ifend}
   TCanvas                  = Vcl.Graphics.TCanvas;
 
   //these were moved, aliases are for backwards compatibility.
@@ -950,7 +950,6 @@ type
     function GetNext(Node: PVirtualNode): PVirtualNode;
   end;
 
-
   // ----- TBaseVirtualTree
   TBaseVirtualTree = class abstract(TVTBaseAncestor)
   private
@@ -1702,7 +1701,9 @@ type
     procedure UpdateDesigner; virtual;
     procedure UpdateEditBounds; virtual;
     procedure UpdateHeaderRect; virtual;
+{$IFDEF VT_FMX}
     procedure UpdateStyleElements; override;
+{$ENDIF}
     procedure UpdateWindowAndDragImage(const Tree: TBaseVirtualTree; TreeRect: TRect; UpdateNCArea,
       ReshowDragImage: Boolean); virtual;
     procedure ValidateCache; virtual;
@@ -2748,7 +2749,8 @@ begin
             begin
               // Determine actual line break style depending on what was returned by the methods and what's in the node.
               if LineBreakStyle = hlbDefault then
-                if (vsMultiline in Node.States) or HintText.Contains(#13) then
+                if (vsMultiline in Node.States) or
+                  {$if CompilerVersion > 23}HintText.Contains(#13){$else}(pos(#13,HintText)>0){$ifend} then
                   LineBreakStyle := hlbForceMultiLine
                 else
                   LineBreakStyle := hlbForceSingleLine;
@@ -3004,7 +3006,8 @@ procedure InitializeGlobalStructures();
 
 // initialization of stuff global to the unit
 begin
-  if (gInitialized > 0) or (AtomicIncrement(gInitialized) <> 1) then // Ensure threadsafe that this code is executed only once
+  if (gInitialized > 0) or 
+    ({$if CompilerVersion > 23}AtomicIncrement{$else}InterlockedIncrement{$ifend}(gInitialized) <> 1) then // Ensure threadsafe that this code is executed only once
     exit;
 
   // This watcher is used whenever a global structure could be modified by more than one thread.
@@ -3402,7 +3405,7 @@ var
   UncheckedCount,
   MixedCheckCount,
   CheckedCount: Cardinal;
-
+  NodeState : TCheckState;
 begin
   Result := not (vsChecking in Node.States);
   with Node^ do
@@ -3446,7 +3449,8 @@ begin
                       begin
                         if Run.CheckType in [ctCheckBox, ctTriStateCheckBox] then
                         begin
-                          if not Self.GetCheckState(Run).IsDisabled() then
+                          NodeState := Self.GetCheckState(Run);
+                          if not {$if CompilerVersion > 23}NodeState.IsDisabled(){$else}CheckStateIsDisabled(NodeState){$ifend} then
                             SetCheckState(Run, csUncheckedNormal);
                           // Check if the new child state was set successfully, otherwise we have to adjust the
                           // node's new check state accordingly.
@@ -3485,7 +3489,8 @@ begin
                       begin
                         if Run.CheckType in [ctCheckBox, ctTriStateCheckBox] then
                         begin
-                          if not Self.GetCheckState(Run).IsDisabled() then
+                          CheckState := Self.GetCheckState(Run);
+                          if not {$if CompilerVersion > 23}CheckState.IsDisabled(){$else}CheckStateIsDisabled(CheckState){$ifend} then
                             SetCheckState(Run, csCheckedNormal);
                           // Check if the new child state was set successfully, otherwise we have to adjust the
                           // node's new check state accordingly.
@@ -3535,7 +3540,10 @@ begin
         if Result then
           CheckState := Value // Set new check state
         else
-          CheckState := Self.GetCheckState(Node).GetUnpressed(); // Reset dynamic check state.
+        begin
+          NodeState := Self.GetCheckState(Node);
+          CheckState := {$if CompilerVersion > 23}NodeState.GetUnpressed(){$else}cUnpressedState[NodeState]{$ifend}; // Reset dynamic check state.
+        end;
 
         // Propagate state up to the parent.
         if not (vsInitialized in Parent.States) then
@@ -5478,6 +5486,7 @@ procedure TBaseVirtualTree.SetCheckStateForAll(aCheckState: TCheckState; pSelect
 
 var
   lItem : PVirtualNode;
+  NodeState : TCheckState;
 begin
   With Self do begin
     Screen.Cursor := crHourGlass;
@@ -5489,7 +5498,9 @@ begin
         lItem := GetFirst;
       //for i:=0 to List.Items.Count-1 do begin
       while Assigned(lItem) do begin
-        if not pExcludeDisabled or not CheckState[lItem].IsDisabled() then
+        NodeState := CheckState[lItem];
+        if not pExcludeDisabled or
+          not {$if CompilerVersion > 23}NodeState.IsDisabled(){$else}CheckStateIsDisabled(NodeState){$ifend} then
           CheckState[lItem] := aCheckState;
         if pSelectedOnly then
           lItem := GetNextSelected(lItem)
@@ -9615,7 +9626,7 @@ var
   BoxCount: Cardinal;
   PartialCheck: Boolean;
   Run: PVirtualNode;
-
+  NodeState : TCheckState;
 begin
   CheckCount := 0;
   BoxCount := 0;
@@ -9631,7 +9642,7 @@ begin
       if Run.CheckType in [ctCheckBox, ctTriStateCheckBox] then
       begin
         System.Inc(BoxCount);
-        if NewCheckState.IsChecked then
+        if {$if CompilerVersion > 23}NewCheckState.IsChecked{$else}CheckStateIsChecked(NewCheckState){$ifend} then
           System.Inc(CheckCount);
         PartialCheck := PartialCheck or (NewCheckState = csMixedNormal);
       end;
@@ -9640,7 +9651,8 @@ begin
       if Run.CheckType in [ctCheckBox, ctTriStateCheckBox] then
       begin
         System.Inc(BoxCount);
-        if GetCheckState(Run).IsChecked then
+        NodeState := GetCheckState(Run);
+        if {$if CompilerVersion > 23}NodeState.IsChecked{$else}CheckStateIsChecked(NodeState){$ifend} then
           System.Inc(CheckCount);
         PartialCheck := PartialCheck or (GetCheckState(Run) = csMixedNormal);
       end;
@@ -10391,7 +10403,7 @@ begin
     ctButton,
     ctCheckBox:
     begin
-      Result := CheckState.GetToggled();
+      Result := {$if CompilerVersion > 23}CheckState.GetToggled{$else}cToggledState[CheckState]{$ifend};
     end;//ctCheckbox
     ctRadioButton:
       Result := csCheckedNormal;
@@ -11875,7 +11887,7 @@ begin
           UpdateHorizontalScrollBar(suoRepaintScrollBars in Options);
           if (suoRepaintHeader in Options) and (hoVisible in FHeader.Options) then
             FHeader.Invalidate(nil);
-          if not (tsSizing in FStates) and (FScrollBarOptions.ScrollBars in [System.UITypes.TScrollStyle.ssHorizontal, System.UITypes.TScrollStyle.ssBoth]) then
+          if not (tsSizing in FStates) and (FScrollBarOptions.ScrollBars in [TScrollStyle.ssHorizontal,TScrollStyle.ssBoth]) then
             UpdateVerticalScrollBar(suoRepaintScrollBars in Options);
         end;
 
@@ -11883,7 +11895,7 @@ begin
         begin
           UpdateVerticalScrollBar(suoRepaintScrollBars in Options);
           if not (FHeader.UseColumns or IsMouseSelecting) and
-            (FScrollBarOptions.ScrollBars in [System.UITypes.TScrollStyle.ssHorizontal, System.UITypes.TScrollStyle.ssBoth]) then
+            (FScrollBarOptions.ScrollBars in [TScrollStyle.ssHorizontal,TScrollStyle.ssBoth]) then
             UpdateHorizontalScrollBar(suoRepaintScrollBars in Options);
         end;
       end;
@@ -12883,10 +12895,10 @@ begin
   else
     IsHot := False;
 
-  if ImgCheckState.IsDisabled then begin // disabled image?
+  if {$if CompilerVersion > 23}ImgCheckState.IsDisabled{$else}CheckStateIsDisabled(ImgCheckState){$ifend} then begin // disabled image?
     // We need to use disabled images, so map ImgCheckState value from disabled to normal, as disabled state is expressed by ImgEnabled.
     ImgEnabled := False;
-    ImgCheckState := ImgCheckState.GetEnabled();
+    ImgCheckState := {$if CompilerVersion > 23}ImgCheckState.GetEnabled(){$else}cEnabledState[ImgCheckState]{$ifend};
   end;//if
 
   if ImgCheckType = ctTriStateCheckBox then
@@ -14035,8 +14047,8 @@ begin
         SelfCheckState := Self.GetCheckState(Node);
         if ((ParentCheckState = csCheckedNormal)
              or (ParentCheckState = csUncheckedNormal))
-            and (not SelfCheckState.IsDisabled())
-            and (SelfCheckState <> ParentCheckState) 
+            and (not {$if CompilerVersion > 23}SelfCheckState.IsDisabled(){$else}CheckStateIsDisabled(SelfCheckState)){$ifend}
+            and (SelfCheckState <> ParentCheckState)
             and (Parent <> FRoot)
         then
           SetCheckState(Node, Node.Parent.CheckState);
@@ -22742,7 +22754,7 @@ begin
     else
       if (R.Bottom > ClientHeight) or Center then
       begin
-        HScrollBarVisible := (ScrollBarOptions.ScrollBars in [System.UITypes.TScrollStyle.ssBoth, System.UITypes.TScrollStyle.ssHorizontal]) and
+        HScrollBarVisible := (ScrollBarOptions.ScrollBars in [TScrollStyle.ssBoth,TScrollStyle.ssHorizontal]) and
           (ScrollBarOptions.AlwaysVisible or (FRangeX > ClientWidth));
         if Center then
           SetOffsetY(FOffsetY - R.Bottom + Divide(ClientHeight, 2))
@@ -23629,7 +23641,7 @@ begin
   else
     FEffectiveOffsetX := -FOffsetX;
 
-  if FScrollBarOptions.ScrollBars in [System.UITypes.TScrollStyle.ssHorizontal, System.UITypes.TScrollStyle.ssBoth] then
+  if FScrollBarOptions.ScrollBars in [TScrollStyle.ssHorizontal,TScrollStyle.ssBoth] then
   begin
     ZeroMemory (@ScrollInfo, SizeOf(ScrollInfo));
     ScrollInfo.cbSize := SizeOf(ScrollInfo);
@@ -23703,12 +23715,14 @@ end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
+{$IFDEF VT_FMX}
 procedure TBaseVirtualTree.UpdateStyleElements;
 begin
   inherited;
   UpdateHeaderRect;
   FHeader.Columns.PaintHeader(Canvas, FHeaderRect, Point(0,0));
 end;
+{$ENDIF}
 
 //----------------------------------------------------------------------------------------------------------------------
 

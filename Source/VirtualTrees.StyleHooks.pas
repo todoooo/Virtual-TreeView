@@ -30,6 +30,7 @@ interface
 {$WARN UNSAFE_CODE OFF}
 
 uses
+{$IFDEF VT_FMX}VirtualTrees.BaseAncestorFMX,{$ELSE}VirtualTrees.BaseAncestorVCL,{$ENDIF}
   Winapi.Windows,
   Winapi.Messages,
   Winapi.UxTheme,
@@ -98,7 +99,8 @@ type
     function PointInTreeHeader(const P: TPoint): Boolean;
     procedure UpdateScroll;{$if CompilerVersion >= 34}override;{$ifend}
   public
-    constructor Create(AControl: TWinControl); override;
+    constructor Create(AControl : TVTBaseAncestor); reintroduce;
+    procedure AfterConstruction; override;
     destructor Destroy; override;
     /// Draws an expand arrow like used in the RAD Studio IDE.
     /// The code is not yet dpi-aware.
@@ -162,7 +164,7 @@ procedure TVclStyleScrollBarsHook.CalcScrollBarsRect();
   begin
     BarInfo.cbSize := SizeOf(BarInfo);
     Ret := GetScrollBarInfo(Handle, Integer(OBJID_VSCROLL), BarInfo);
-    FVertScrollWnd.Visible := (seBorder in Control.StyleElements) and Ret and (not (STATE_SYSTEM_INVISIBLE and BarInfo.rgstate[0] <> 0));
+    FVertScrollWnd.Visible := (seBorder in TVTBaseAncestor(Control).StyleElements) and Ret and (not (STATE_SYSTEM_INVISIBLE and BarInfo.rgstate[0] <> 0));
     FVertScrollWnd.Enabled := FVertScrollWnd.Visible and (not (STATE_SYSTEM_UNAVAILABLE and BarInfo.rgstate[0] <> 0));
   end;
 
@@ -173,7 +175,7 @@ procedure TVclStyleScrollBarsHook.CalcScrollBarsRect();
   begin
     BarInfo.cbSize := SizeOf(BarInfo);
     Ret := GetScrollBarInfo(Handle, Integer(OBJID_HSCROLL), BarInfo);
-    FHorzScrollWnd.Visible := (seBorder in Control.StyleElements) and Ret and (not (STATE_SYSTEM_INVISIBLE and BarInfo.rgstate[0] <> 0));
+    FHorzScrollWnd.Visible := (seBorder in TVTBaseAncestor(Control).StyleElements) and Ret and (not (STATE_SYSTEM_INVISIBLE and BarInfo.rgstate[0] <> 0));
     FHorzScrollWnd.Enabled := FHorzScrollWnd.Visible and (not (STATE_SYSTEM_UNAVAILABLE and BarInfo.rgstate[0] <> 0));
   end;
 
@@ -195,9 +197,16 @@ end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
-constructor TVclStyleScrollBarsHook.Create(AControl: TWinControl);
+constructor TVclStyleScrollBarsHook.Create(AControl : TVTBaseAncestor);
 begin
-  inherited;
+  inherited Create(AControl);
+end;
+
+//----------------------------------------------------------------------------------------------------------------------
+
+procedure TVclStyleScrollBarsHook.AfterConstruction;
+begin
+  inherited AfterConstruction;
   InitScrollBars;
 
   VertSliderState := tsThumbBtnVertNormal;
@@ -270,7 +279,7 @@ begin
   if ((Handle = 0) or (DC = 0)) then
     Exit;
 
-  if FHorzScrollWnd.Visible and StyleServices.Available and (seBorder in Control.StyleElements) then
+  if FHorzScrollWnd.Visible and StyleServices.Available and (seBorder in TVTBaseAncestor(Control).StyleElements) then
   begin
     B := TBitmap.Create;
     try
@@ -320,7 +329,7 @@ begin
   if ((Handle = 0) or (DC = 0)) then
     Exit;
 
-  if FVertScrollWnd.Visible and StyleServices.Available and (seBorder in Control.StyleElements) then
+  if FVertScrollWnd.Visible and StyleServices.Available and (seBorder in TVTBaseAncestor(Control).StyleElements) then
   begin
     B := TBitmap.Create;
     try

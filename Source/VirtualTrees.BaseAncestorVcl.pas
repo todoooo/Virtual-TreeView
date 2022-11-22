@@ -21,6 +21,10 @@ uses
   VirtualTrees.Types;
 
 type
+{$if CompilerVersion < 24}
+  TStyleElements = set of (seFont, seClient, seBorder);
+{$ifend}
+
   TVTBaseAncestorVcl = class abstract(TCustomControl)
   private
     // MSAA support
@@ -28,6 +32,9 @@ type
     FAccessibleItem: IAccessible;                // The IAccessible to the item that currently has focus.
     FAccessibleName: string;                     // The name the window is given for screen readers.
     FDottedBrushTreeLines: TBrush;               // used to paint dotted lines without special pens
+{$if CompilerVersion < 24}
+    FStyleElements: TStyleElements;
+{$ifend}
 
     function GetDottedBrushGridLines: TBrush;
   protected // methods
@@ -89,7 +96,12 @@ type
     property Accessible: IAccessible read FAccessible write FAccessible;
     property AccessibleItem: IAccessible read FAccessibleItem write FAccessibleItem;
     property AccessibleName: string read FAccessibleName write FAccessibleName;
+{$if CompilerVersion < 24}
+    property StyleElements: TStyleElements read FStyleElements write FStyleElements;
+{$ifend}
   end;
+
+  TVTBaseAncestor = TVTBaseAncestorVcl;
 
 implementation
 uses Winapi.Messages;

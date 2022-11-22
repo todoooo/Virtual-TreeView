@@ -151,6 +151,8 @@ type
     property Color: TAlphaColor read GetFillColor write SetFillColor;
   end;
 
+  TVTBaseAncestor = TVTBaseAncestorFMX;
+
 {$IFNDEF MSWINDOWS}
 const
   { GetSystemMetrics() codes }

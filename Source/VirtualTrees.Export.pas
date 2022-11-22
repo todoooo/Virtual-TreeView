@@ -431,7 +431,7 @@ begin
           lGetCellTextEventArgs.Column := Index;
           CrackTree.DoGetText(lGetCellTextEventArgs);
           Buffer.Add(lGetCellTextEventArgs.CellText);
-          if not lGetCellTextEventArgs.StaticText.IsEmpty and (toShowStaticText in TStringTreeOptions(CrackTree.TreeOptions).StringOptions) then
+          if lGetCellTextEventArgs.HasStaticText and (toShowStaticText in TStringTreeOptions(CrackTree.TreeOptions).StringOptions) then
             Buffer.Add(' ' + lGetCellTextEventArgs.StaticText);
           Buffer.Add('</td>');
         end;
@@ -758,7 +758,7 @@ begin
           begin
             TextPlusFont(lGetCellTextEventArgs.CellText, CrackTree.Canvas.Font);
           end;
-          if not lGetCellTextEventArgs.StaticText.IsEmpty and (toShowStaticText in TStringTreeOptions(CrackTree.TreeOptions).StringOptions) then
+          if lGetCellTextEventArgs.HasStaticText and (toShowStaticText in TStringTreeOptions(CrackTree.TreeOptions).StringOptions) then
           begin
             CrackTree.DoPaintText(Run, CrackTree.Canvas, Index, ttStatic);
             TextPlusFont(' ' + lGetCellTextEventArgs.StaticText, CrackTree.Canvas.Font);
@@ -906,7 +906,7 @@ begin
             CrackTree.DoGetText(lGetCellTextEventArgs);
             if Index = CrackTree.Header.MainColumn then
               Buffer.Add(Copy(Tabs, 1, Integer(CrackTree.GetNodeLevel(Run)) * Length(Separator)));
-            if not lGetCellTextEventArgs.StaticText.IsEmpty and (toShowStaticText in TStringTreeOptions(CrackTree.TreeOptions).StringOptions) then
+            if lGetCellTextEventArgs.HasStaticText and (toShowStaticText in TStringTreeOptions(CrackTree.TreeOptions).StringOptions) then
               CheckQuotingAndAppend(lGetCellTextEventArgs.CellText + ' ' + lGetCellTextEventArgs.StaticText)
             else
               CheckQuotingAndAppend(lGetCellTextEventArgs.CellText);

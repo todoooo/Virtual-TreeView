@@ -12,7 +12,8 @@ uses
   Vcl.Controls,
   Vcl.GraphUtil,
   Vcl.Themes,
-  Vcl.Graphics
+  Vcl.Graphics,
+  Vcl.StdCtrls
   ;
 
 {$MINENUMSIZE 1, make enumerations as small as possible}
@@ -189,6 +190,7 @@ type
     csMixedDisabled      // disabled 3-state checkbox
     );
 
+{$if CompilerVersion > 23}
   /// Adds some convenience methods to type TCheckState
   TCheckStateHelper = record helper for TCheckState
   strict private
@@ -212,6 +214,7 @@ type
     function IsUnChecked() : Boolean; inline;
     function IsMixed() : Boolean; inline;
   end;
+{$ifend}
 
 type
   // Options per column.
@@ -254,6 +257,7 @@ type
     sdDescending
     );
 
+{$if CompilerVersion > 23}
   TSortDirectionHelper = record helper for VirtualTrees.Types.TSortDirection
   strict private
   const
@@ -262,6 +266,7 @@ type
     /// Returns +1 for ascending and -1 for descending sort order.
     function ToInt() : Integer; inline;
   end;
+{$ifend}
 
 // Used during owner draw of the header to indicate which drop mark for the column must be drawn.
   TVTDropMarkMode = (
@@ -536,6 +541,28 @@ type
     property ScrollBarStyle      : TScrollBarStyle read FScrollBarStyle write SetScrollBarStyle default sbmRegular;
     property VerticalIncrement   : TVTScrollIncrement read FIncrementY write FIncrementY default 20;
   end;
+
+{$if CompilerVersion < 24}
+ const
+    // Lookup to quickly convert a specific check state into its pressed counterpart and vice versa.
+    cPressedState: array[TCheckState] of TCheckState = (
+      csUncheckedPressed, csUncheckedPressed, csCheckedPressed, csCheckedPressed, csMixedPressed, csMixedPressed, csUncheckedDisabled, csCheckedDisabled, csMixedDisabled
+    );
+    cUnpressedState: array[TCheckState] of TCheckState = (
+      csUncheckedNormal, csUncheckedNormal, csCheckedNormal, csCheckedNormal, csMixedNormal, csMixedNormal, csUncheckedDisabled, csCheckedDisabled, csMixedDisabled
+    );
+    cEnabledState: array[TCheckState] of TCheckState = (
+      csUncheckedNormal, csUncheckedPressed, csCheckedNormal, csCheckedPressed, csMixedNormal, csMixedPressed, csUncheckedNormal, csCheckedNormal, csMixedNormal
+    );
+    cToggledState: array[TCheckState] of TCheckState = (
+      csCheckedNormal, csCheckedPressed, csUnCheckedNormal, csUnCheckedPressed, csCheckedNormal, csCheckedPressed, csUncheckedDisabled, csCheckedDisabled, csMixedDisabled
+    );
+
+  function CheckStateIsDisabled(CheckState: TCheckState): Boolean; inline;
+  function CheckStateIsChecked(CheckState: TCheckState): Boolean; inline;
+  function CheckStateIsUnchecked(CheckState: TCheckState): Boolean; inline;
+  function CheckStateIsMixed(CheckState: TCheckState): Boolean; inline;
+{$ifend}
 
 implementation
 
@@ -906,7 +933,7 @@ begin
 end;
 
 
-
+{$if CompilerVersion > 23}
 { TCheckStateHelper }
 
 function TCheckStateHelper.IsDisabled : Boolean;
@@ -955,6 +982,31 @@ function TSortDirectionHelper.ToInt() : Integer;
 begin
   Result := cSortDirectionToInt[Self];
 end;
+
+{$else}
+
+function CheckStateIsDisabled(CheckState: TCheckState): Boolean;
+begin
+  Result := CheckState in [csUncheckedDisabled, csCheckedDisabled, csMixedDisabled];
+end;
+
+function CheckStateIsChecked(CheckState: TCheckState): Boolean;
+begin
+  Result := CheckState in [csCheckedNormal, csCheckedPressed, csCheckedDisabled];
+end;
+
+function CheckStateIsUnchecked(CheckState: TCheckState): Boolean;
+begin
+  Result := CheckState in [csUncheckedNormal, csUncheckedPressed, csUncheckedDisabled];
+end;
+
+function CheckStateIsMixed(CheckState: TCheckState): Boolean;
+begin
+  Result := CheckState in [csMixedNormal, csMixedPressed, csMixedDisabled];
+end;
+
+//
+{$ifend}
 
 
 end.

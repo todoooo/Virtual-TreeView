@@ -3,6 +3,7 @@
 interface
 
 uses
+{$IFDEF VT_FMX}VirtualTrees.BaseAncestorFMX,{$ELSE}VirtualTrees.BaseAncestorVCL,{$ENDIF}
   System.Classes,
   Vcl.Graphics,
   Vcl.Themes,
@@ -55,7 +56,7 @@ type
       clInactiveCaptionText //UnfocusedColor  [IPK]
     );
   private
-    FOwner  : TCustomControl;
+    FOwner  : TVTBaseAncestor;
     FColors : array [TVTColorEnum] of TColor; //[IPK] 15 -> 16
     function GetColor(const Index : TVTColorEnum) : TColor;
     procedure SetColor(const Index : TVTColorEnum; const Value : TColor);
@@ -63,7 +64,7 @@ type
     function GetHeaderFontColor : TColor;
     function GetNodeFontColor : TColor;
   public
-    constructor Create(AOwner : TCustomControl);
+    constructor Create(AOwner : TVTBaseAncestor);
 
     procedure Assign(Source : TPersistent); override;
     function GetSelectedNodeFontColor(Focused : boolean) : TColor;
@@ -115,7 +116,7 @@ type
 
   //----------------- TVTColors ------------------------------------------------------------------------------------------
 
-constructor TVTColors.Create(AOwner : TCustomControl);
+constructor TVTColors.Create(AOwner : TVTBaseAncestor);
 var
   CE : TVTColorEnum;
 begin
